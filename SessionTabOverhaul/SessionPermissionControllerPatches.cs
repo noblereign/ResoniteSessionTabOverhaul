@@ -16,12 +16,12 @@ namespace SessionTabOverhaul
         [HarmonyPatch(nameof(SessionPermissionController.Create))]
         private static void CreatePostfix(SessionPermissionController __result)
         {
-            var bgImage = __result.Slot.AttachComponent<Image>();
+            Image bgImage = __result.Slot.AttachComponent<Image>();
             bgImage.Tint.Value = (__result.Slot.ChildIndex & 1) == 0 ? SessionTabOverhaul.FirstRowColor : SessionTabOverhaul.SecondRowColor;
 
             __result.Slot.GetComponent<LayoutElement>().MinHeight.Value += 8;
 
-            var horizontal = __result.Slot.GetComponentInChildren<HorizontalLayout>();
+            HorizontalLayout horizontal = __result.Slot.GetComponentInChildren<HorizontalLayout>();
             horizontal.PaddingBottom.Value = 4;
             horizontal.PaddingRight.Value = 4;
             horizontal.PaddingLeft.Value = 4;

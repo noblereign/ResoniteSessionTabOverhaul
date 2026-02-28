@@ -13,7 +13,7 @@ namespace SessionTabOverhaul
     [HarmonyPatch(typeof(SessionControlDialog))]
     internal static class SessionControlDialogPatches
     {
-        private static readonly float2 rectOffset = new(4, 4);
+        private static readonly float2 rectOffset = new float2(4, 4);
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(SessionControlDialog.GenerateUi))]
@@ -22,22 +22,22 @@ namespace SessionTabOverhaul
             if (tab != SessionControlDialog.Tab.Settings)
                 return;
 
-            foreach (var accessLevelRadio in __instance._accessLevelRadios)
+            foreach (Radio accessLevelRadio in __instance._accessLevelRadios)
             {
-                var accessLevelRow = accessLevelRadio.Slot.Parent.Parent.Parent;
+                Slot accessLevelRow = accessLevelRadio.Slot.Parent.Parent.Parent;
 
-                var layoutElement = accessLevelRow.GetComponent<LayoutElement>();
+                LayoutElement layoutElement = accessLevelRow.GetComponent<LayoutElement>();
                 layoutElement.PreferredHeight.Value += 8;
                 layoutElement.MinHeight.Value += 8;
 
-                foreach (var child in accessLevelRow.Children)
+                foreach (Slot? child in accessLevelRow.Children)
                 {
-                    var rectTransform = child.GetComponent<RectTransform>();
+                    RectTransform rectTransform = child.GetComponent<RectTransform>();
                     rectTransform.OffsetMin.Value += rectOffset;
                     rectTransform.OffsetMax.Value -= rectOffset;
                 }
 
-                var image = accessLevelRow.AttachComponent<Image>();
+                Image image = accessLevelRow.AttachComponent<Image>();
                 image.Tint.Value = (accessLevelRow.ChildIndex & 1) == 0 ? SessionTabOverhaul.FirstRowColor : SessionTabOverhaul.SecondRowColor;
             }
         }
@@ -46,9 +46,9 @@ namespace SessionTabOverhaul
         [HarmonyPatch(nameof(SessionControlDialog.OnAttach))]
         private static void OnAttachPostfix(SessionControlDialog __instance)
         {
-            var rectTransform = __instance.Slot.GetComponent<RectTransform>();
-            rectTransform.OffsetMin.Value = new(16, 16);
-            rectTransform.OffsetMax.Value = new(-16, -16);
+            RectTransform rectTransform = __instance.Slot.GetComponent<RectTransform>();
+            rectTransform.OffsetMin.Value = new float2(16, 16);
+            rectTransform.OffsetMax.Value = new float2(-16, -16);
         }
     }
 }

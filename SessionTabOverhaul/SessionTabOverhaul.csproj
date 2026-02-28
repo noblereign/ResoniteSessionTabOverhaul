@@ -11,7 +11,10 @@
         <!-- Change CopyToMods to true if you'd like builds to be moved into the Mods folder automatically-->
         <CopyToMods Condition="'$(CopyToMods)'==''">true</CopyToMods>
         <DebugType Condition="'$(Configuration)'=='Debug'">embedded</DebugType>
+
+        <ResonitePath Condition="'$(ResonitePath)' != ''">$([MSBuild]::EnsureTrailingSlash('$(ResonitePath)'))</ResonitePath>
     </PropertyGroup>
+    
 
     <PropertyGroup Condition="'$(ResonitePath)'==''">
         <!-- If you don't want to provide a ResonitePath in dotnet build, you can specify one here -->
@@ -32,6 +35,10 @@
         </Reference>
         <Reference Include="Elements.Core" Publicize="true">
             <HintPath>$(ResonitePath)Elements.Core.dll</HintPath>
+            <Private>False</Private>
+        </Reference>
+        <Reference Include="Awwdio" Publicize="true">
+            <HintPath>$(ResonitePath)Awwdio.dll</HintPath>
             <Private>False</Private>
         </Reference>
         <Reference Include="SkyFrost.Base" Publicize="true">
