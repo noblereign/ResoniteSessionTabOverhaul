@@ -37,7 +37,7 @@ namespace SessionTabOverhaul
         public override string Author => "Banane9, NepuShiro";
         public override string Link => "https://github.com/NepuShiro/ResoniteSessionTabOverhaul";
         public override string Name => "SessionTabOverhaul";
-        public override string Version => "2.1.1";
+        public override string Version => "2.2.0";
 
         internal static bool ColorHostName => Config.GetValue(ColorHostNameKey);
         internal static bool ColorLocalUserName => Config.GetValue(ColorLocalUserNameKey);
