@@ -1,4 +1,6 @@
-﻿using FrooxEngine.UIX;
+﻿using FrooxEngine;
+using FrooxEngine.UIX;
+using System;
 
 namespace SessionTabOverhaul
 {
@@ -19,5 +21,11 @@ namespace SessionTabOverhaul
         public Image? RowBackgroundImage { get; set; }
 
         public Text? VoiceModeLabel { get; set; }
+
+
+        public ValueTag<float>? WaveformGraphTag { get; set; }
+        public ValueTag<int>? WaveformGraphOffset { get; set; }
+        public LineGraphMesh? WaveformLineGraphMesh { get; set; }
+        public WeakReference<VolumeMeter>? WorldSpaceVolumeMeter { get; set; }
     }
 }

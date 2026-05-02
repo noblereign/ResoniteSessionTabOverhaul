@@ -1,14 +1,14 @@
-﻿using FrooxEngine.UIX;
+﻿using Elements.Assets;
+using Elements.Core;
 using FrooxEngine;
+using FrooxEngine.UIX;
 using HarmonyLib;
+using Renderite.Shared;
+using SkyFrost.Base;
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using Elements.Assets;
-using Elements.Core;
-using SkyFrost.Base;
-using Renderite.Shared;
 using User = FrooxEngine.User;
 
 namespace SessionTabOverhaul
@@ -108,19 +108,28 @@ namespace SessionTabOverhaul
 
             ui.Panel();
             ui.OverlappingLayout();
-            RectMesh<AudioSourceWaveformMesh> audioSourceWaveForm = ui.RectMesh<AudioSourceWaveformMesh>();
-            AudioSourceWaveformMesh wav = audioSourceWaveForm.Mesh;
-            wav.HistoryLength.Value = 0.5f;
-            wav.Points.Value = 1024;
+            RectMesh<LineGraphMesh> audioSourceWaveForm = ui.RectMesh<LineGraphMesh>();
+            LineGraphMesh wav = audioSourceWaveForm.Mesh;
             wav.Width.Value = 1f;
-            try
-            {
-                wav.Source.Target = (user.Streams.FirstOrDefault(s => s is OpusStream<MonoSample>) as OpusStream<MonoSample>)!;
-            }
-            catch
-            {
-                wav.Source.Target = audioSourceWaveForm.Slot.GetComponentOrAttach<LocalAudioDeviceStream>();
-            }
+
+            ValueGraphRecorder valueGraphRecorder = audioSourceWaveForm.Slot.AttachComponent<ValueGraphRecorder>();
+            ValueTag<float> field = audioSourceWaveForm.Slot.AttachComponent<ValueTag<float>>();
+            valueGraphRecorder.SourceValue.Target = field.Value;
+            valueGraphRecorder.TargetArray.Target = wav.Values;
+            valueGraphRecorder.TargetArrayOffset.Target = wav.StartIndex;
+            valueGraphRecorder.RangeMin.Target = wav.MinValue;
+            valueGraphRecorder.RangeMax.Target = wav.MaxValue;
+            valueGraphRecorder.Points.Value = 256;
+
+            ValueTag<int> graphRecorderBugFixTag = audioSourceWaveForm.Slot.AttachComponent<ValueTag<int>>();
+            valueGraphRecorder.TargetArrayOffset.Target = graphRecorderBugFixTag.Value;
+
+            extraData.WaveformLineGraphMesh = wav;
+            extraData.WaveformGraphOffset = graphRecorderBugFixTag;
+            extraData.WaveformGraphTag = field;
+            // once this is set, it'll keep waiting for the voice stream until we get it later on
+            // no need to set it right here
+
             wav.Color.DriveFrom(controller._name.Target.Color);
 
             if (!SessionTabOverhaul.HideAllBadges)
@@ -368,6 +377,38 @@ namespace SessionTabOverhaul
 
         private static string GetUserFPSOrQueuedMessages(User user) => user.QueuedMessages > 10 ? $"<color={colorX.Red.SetValue(.7f).ToHexString()}>{user.QueuedMessages} <size=60%>Q'd" : $"<color=#F0F0F0>{MathX.RoundToInt(user.FPS)} <size=60%>FPS";
 
+        private static void AssignVoiceStream(User user, OpusStream<MonoSample>? voiceStream, SessionUserControllerExtraData extraData)
+        {
+            if (voiceStream == null)
+            {
+                voiceStream = user.Streams.OfType<OpusStream<MonoSample>>().FirstOrDefault(s => s.Name == "Voice");
+            }
+            if (voiceStream == null)
+            {
+                return;
+            }
+
+            user.World.RunSynchronously(() =>
+            {
+                if (user.World.LocalUser.Root == null)
+                    return;
+
+                UserRoot? root = user.Root;
+
+                if (root == null) return;
+
+                Slot rootSlot = root.Slot;
+                string slotName = $"{user.UserName}'s Voice Stream VolumeMeter";
+
+                VolumeMeter volMeter = rootSlot.FindLocalChildOrAdd(slotName).GetComponentOrAttach<VolumeMeter>();
+                volMeter.Source.Target = voiceStream;
+                volMeter.Power.Value = .25f;
+                volMeter.Smoothing.Value = 0;
+
+                extraData.WorldSpaceVolumeMeter = new WeakReference<VolumeMeter>(volMeter);
+            });
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch("OnCommonUpdate")]
         private static void OnCommonUpdatePostfix(SessionUserController __instance)
@@ -422,9 +463,26 @@ namespace SessionTabOverhaul
 
             if (extraData.BringButton != null)
                 extraData.BringButton.Enabled = !user.IsLocalUser;
-            
+
             if (extraData.ParentUserCheckbox != null)
                 extraData.ParentUserCheckbox.Enabled = !user.IsLocalUser;
+
+            if (extraData.WaveformGraphTag != null && extraData.WaveformLineGraphMesh != null && extraData.WaveformGraphOffset != null)
+            {
+                if (extraData.WorldSpaceVolumeMeter != null && extraData.WorldSpaceVolumeMeter.TryGetTarget(out VolumeMeter worldSpaceVolumeMeter))
+                {
+                    // creating a faux-waveform...
+                    // using the actual waveform mesh would've been nice, but
+                    // getting that to work between worldspace and userspace is incredibly complicated :(
+                    extraData.WaveformGraphTag.Value.Value = .5f + ((worldSpaceVolumeMeter.Volume.Value / 2) * (__instance.World.Time.LocalUpdateIndex % 2 == 0 ? 1 : -1));
+                }
+                else
+                {
+                    extraData.WaveformGraphTag.Value.Value = .5f;
+                    AssignVoiceStream(user, null, extraData);
+                }
+                extraData.WaveformLineGraphMesh.StartIndex.Value = extraData.WaveformGraphOffset.Value - 1;
+            }
         }
     }
 }
